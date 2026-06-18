@@ -1,0 +1,2 @@
+phase-3-container-security                 hardened   139MB
+phase-3-container-security                 baseline   1.13GB

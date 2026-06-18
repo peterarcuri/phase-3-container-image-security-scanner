@@ -1,0 +1,16 @@
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN groupadd -r appgroup && useradd --no-log-init -r -g appgroup appuser
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ /app/
+
+USER appuser
+
+CMD ["python", "app/main.py"]
+

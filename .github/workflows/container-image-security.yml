@@ -1,0 +1,59 @@
+name: Container Image Security Scanner
+
+on:
+    push:
+        branches: [ main ]
+    pull_request:
+        branches: [ main ]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    security-events: write
+
+jobs:
+    container-security:
+        runs-on : ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.13"
+
+            - name: Install test dependencies
+              run: pip install -r requirements.txt
+
+            - name: Run tests
+              run: pytest
+
+            - name: Build baseline image
+              run: docker build -f Dockerfile.baseline -t phase-3-container-security:baseline .
+
+            - name: Build hardened image
+              run: docker build -f Dockerfile.hardened -t phase-3-container-security:hardened .
+
+            - name: Compare image sizes
+              run: docker images phase-3-container-security > image-size-comparision.txt
+
+            - name: Scan hardened image with Trivy
+              uses: aquasecurity/trivy-action@0.35.0
+              with:
+                image-ref: phase-3-container-security:hardened
+                format: table
+                severity: HIGH, CRITICAL
+                exit-code: "0"
+
+            - name: Generate SBOM with Trivy
+              uses: aquasecurity/trivy-action@0.35.0
+              with:
+                image-ref: phase-3-container-security:hardened
+                format: cyclonedx
+                output: hardened-image-sbom.json
+
+            - name: Validate non-root runtime user
+              run: |
+                docker run --rm phase-3-container-security:hardened id
